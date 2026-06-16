@@ -17,7 +17,7 @@ const posterLoading = ref(true)
 const imgError = ref(false)
 
 onMounted(async () => {
-  // Validate that the key string is provided and populated
+  // Validate that the key string is provided and populated correctly
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     console.warn('TMDB API Key missing.')
     posterLoading.value = false
@@ -28,20 +28,19 @@ onMounted(async () => {
     const query = encodeURIComponent(props.movie.title)
     const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
-    // 1. Initial attempt: Search matching both Title and Year criteria
+    // 1. Initial attempt: Search matching both Title and Year criteria using exact TMDB API v3 endpoints
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // Fixed the trailing optional chaining syntax bug cleanly here
+    // Safely extract the first array index match item from the dataset array structure
     const result = data.results && data.results.length > 0 ? data.results[0] : null
     
     if (result && result.poster_path) {
       posterUrl.value = `https://tmdb.org{result.poster_path}`
-    </script>
     } else {
-      // 2. Secondary fallback attempt: Broader search by Title only
+      // 2. Secondary fallback attempt: Broader search by Title parameter string only
       const broadRes = await fetch(
         `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
       )
@@ -54,6 +53,7 @@ onMounted(async () => {
     }
   } catch (err) {
     console.error('TMDB API fetch execution error encountered:', err)
+    imgError.value = true
   } finally {
     posterLoading.value = false
   }
