@@ -111,7 +111,6 @@ onMounted(async () => {
   }
 
   try {
-    // FIXED: Added .trim() to wipe out any accidental hidden spaces breaking the query
     const cleanTitle = props.movie.title ? props.movie.title.trim() : ''
     if (!cleanTitle) {
       posterLoading.value = false
@@ -121,33 +120,32 @@ onMounted(async () => {
     const query = encodeURIComponent(cleanTitle)
     const year = props.movie.year ? `&year=${props.movie.year}` : ''
 
-    // 1. Primary search: Matches Title and Release Year
+    // 1. Primary search query path validation
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Pulls index 0 out of the results array via data.results[0]
+    // FIXED: Uses string property shift tracking instead of brackets to bypass all rendering issues
     if (data && data.results && data.results.length > 0) {
-      const firstMatch = data.results[0]
-      if (firstMatch && firstMatch.poster_path) {
-        posterUrl.value = `https://tmdb.org{firstMatch.poster_path}`
+      const firstMovieObject = data.results.shift()
+      if (firstMovieObject && firstMovieObject.poster_path) {
+        posterUrl.value = 'https://tmdb.org' + firstMovieObject.poster_path
         posterLoading.value = false
         return 
       }
     }
 
-    // 2. Secondary fallback search: Matches Title parameter only (ignores conflicting year metadata)
+    // 2. Secondary fallback path search loop
     const broadRes = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
     )
     const broadData = await broadRes.json()
     
-    // FIXED: Pulls index 0 out of the broad results array via broadData.results[0]
     if (broadData && broadData.results && broadData.results.length > 0) {
-      const firstBroadMatch = broadData.results[0]
-      if (firstBroadMatch && firstBroadMatch.poster_path) {
-        posterUrl.value = `https://tmdb.org{firstBroadMatch.poster_path}`
+      const fallbackMovieObject = broadData.results.shift()
+      if (fallbackMovieObject && fallbackMovieObject.poster_path) {
+        posterUrl.value = 'https://tmdb.org' + fallbackMovieObject.poster_path
       }
     }
   } catch (err) {
@@ -158,4 +156,3 @@ onMounted(async () => {
   }
 })
 </script>
-
