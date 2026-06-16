@@ -113,13 +113,13 @@ onMounted(async () => {
     const query = encodeURIComponent(props.movie.title)
     const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
-    // 1. Fetch data from TMDB
+    // 1. Initial attempt: Search matching both Title and Year criteria
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Added [0] to extract the first single movie object from the array
+    // FIXED: Safely extracting index element zero [0] explicitly from the dataset array
     if (data && data.results && data.results.length > 0) {
       const firstMatch = data.results[0]
       if (firstMatch && firstMatch.poster_path) {
@@ -135,7 +135,7 @@ onMounted(async () => {
     )
     const broadData = await broadRes.json()
     
-    // FIXED: Added [0] to extract the first movie from the title-only array search
+    // FIXED: Safely extracting index element zero [0] explicitly from the title broad search
     if (broadData && broadData.results && broadData.results.length > 0) {
       const firstBroadMatch = broadData.results[0]
       if (firstBroadMatch && firstBroadMatch.poster_path) {
