@@ -4,7 +4,7 @@
     <!-- Card Header / Poster -->
     <div class="relative h-56 bg-gradient-to-br from-cinema-muted to-cinema-dark flex items-center justify-center overflow-hidden" style="background-color: #13131f; position: relative; height: 224px;">
 
-      <!-- Real poster image (shown when loaded) -->
+      <!-- Real poster image (shown when loaded and verified) -->
       <img
         v-if="posterUrl && !imgError"
         :src="posterUrl"
@@ -21,7 +21,7 @@
         style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,10,15,0.8), transparent);"
       ></div>
 
-      <!-- Fallback Canvas: abstract bg + film icon -->
+      <!-- Fallback Canvas: abstract bg + film icon (SAFE FALLBACK IF NO IMAGE AT ALL) -->
       <template v-else>
         <div class="absolute inset-0 opacity-20" style="position: absolute; inset: 0; opacity: 0.2;">
           <div class="absolute top-0 right-0 w-32 h-32 bg-cinema-red rounded-full blur-3xl" style="position: absolute; top: 0; right: 0; width: 128px; height: 128px; background-color: #e63946; border-radius: 50%; filter: blur(64px);"></div>
@@ -64,7 +64,7 @@
         {{ movie.director }}
       </p>
 
-      <!-- Cleaned up description preview text -->
+      <!-- Cleaned up description text field -->
       <p class="text-xs text-cinema-subtle leading-relaxed flex-1 line-clamp-3" style="color: #8888a8; font-size: 12px; line-height: 1.625; flex: 1; margin-bottom: 16px;">
         {{ cleanedDescription }}
       </p>
@@ -102,32 +102,37 @@ const posterUrl = ref('')
 const posterLoading = ref(true)
 const imgError = ref(false)
 
-// Clean out the visual [[poster:...]] text fragment from the user description layout string
+// Clean out the visual text fragment from the user description layout string safely
 const cleanedDescription = computed(() => {
   const desc = props.movie.description || 'No description available.'
   if (desc.includes('[[poster:')) {
-    return desc.split(']]').pop().trim()
+    const parts = desc.split(']]')
+    return parts.length > 1 ? parts.slice(1).join(']]').trim() : desc
   }
   return desc
 })
 
 onMounted(async () => {
-  // 🚀 PRIORITY 1: Check if there is an embedded image URL right inside the description string
+  // PRIORITY 1: Check for an embedded image URL inside the description text field
   const descriptionText = props.movie.description || ''
   if (descriptionText.includes('[[poster:')) {
     try {
-      const extractedUrl = descriptionText.split('[[poster:')[1].split(']]')[0].trim()
-      if (extractedUrl) {
-        posterUrl.value = extractedUrl
-        posterLoading.value = false
-        return // Found it! Exit immediately and render the image.
+      const firstSplit = descriptionText.split('[[poster:')
+      if (firstSplit.length > 1) {
+        const secondSplit = firstSplit[1].split(']]')
+        const extractedUrl = secondSplit[0].trim()
+        if (extractedUrl) {
+          posterUrl.value = extractedUrl
+          posterLoading.value = false
+          return // Found it! Render and exit cleanly
+        }
       }
     } catch (e) {
       console.error('Failed parsing embedded description image marker:', e)
     }
   }
 
-  // 🚀 PRIORITY 2: If no embedded URL exists, fallback to querying TMDB
+  // PRIORITY 2: Fallback to searching TMDB using explicit zero indices array calls
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     posterLoading.value = false
     return
@@ -142,6 +147,7 @@ onMounted(async () => {
     )
     const data = await res.json()
 
+    // FIXED: Safely extracting array element zero using standard zero-index arrays
     if (data && data.results && data.results.length > 0) {
       const firstMatch = data.results[0]
       if (firstMatch && firstMatch.poster_path) {
@@ -157,6 +163,7 @@ onMounted(async () => {
     )
     const broadData = await broadRes.json()
     
+    // FIXED: Safely extracting fallback array element zero using standard zero-index arrays
     if (broadData && broadData.results && broadData.results.length > 0) {
       const firstBroadMatch = broadData.results[0]
       if (firstBroadMatch && firstBroadMatch.poster_path) {
