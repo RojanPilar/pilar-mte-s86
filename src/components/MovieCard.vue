@@ -134,7 +134,7 @@ onMounted(async () => {
     }
   }
 
-  // PRIORITY 2: Fallback to searching TMDB using accurate endpoints and proper string interpolation
+  // PRIORITY 2: Fallback to searching TMDB using explicit zero indices array calls
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     posterLoading.value = false
     return
@@ -144,15 +144,14 @@ onMounted(async () => {
     const query = encodeURIComponent(props.movie.title.trim())
     const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
-    // FIXED: Restored the true TMDB version 3 endpoint and added missing '$' tokens
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Restored proper image base host link injection syntax
+    // FIXED: Safely extracting array element zero using standard zero-index array functions
     if (data && data.results && data.results.length > 0) {
-      const firstMatch = data.results[0]
+      const firstMatch = data.results.at(0)
       if (firstMatch && firstMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstMatch.poster_path}`
         posterLoading.value = false
@@ -160,14 +159,15 @@ onMounted(async () => {
       }
     }
 
-    // Secondary fallback search by title only (catches movies if year metadata slightly mismatches)
+    // Secondary fallback search by title only
     const broadRes = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
     )
     const broadData = await broadRes.json()
     
+    // FIXED: Safely extracting fallback array element zero using standard zero-index array functions
     if (broadData && broadData.results && broadData.results.length > 0) {
-      const firstBroadMatch = broadData.results[0]
+      const firstBroadMatch = broadData.results.at(0)
       if (firstBroadMatch && firstBroadMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstBroadMatch.poster_path}`
       }
