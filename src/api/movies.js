@@ -4,8 +4,18 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL
 })
 
-export const addMovie = (movieData) => api.post('/movies', movieData)
+// Automatically pass session tokens securely
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+}, (error) => {
+  return Promise.reject(error)
+})
 
+// === Movie Endpoints ===
 export const getMovies = () => api.get('/movies/getMovies')
 
 export const getMovie = (id) => api.get(`/movies/getMovie/${id}`)
@@ -16,6 +26,7 @@ export const updateMovie = (id, data) => api.patch(`/movies/updateMovie/${id}`, 
 
 export const deleteMovie = (id) => api.delete(`/movies/deleteMovie/${id}`)
 
+// === Comment Endpoints ===
 export const addComment = (id, data) => api.post(`/movies/addComment/${id}`, data)
 
 export const getComments = (id) => api.get(`/movies/getComments/${id}`)
