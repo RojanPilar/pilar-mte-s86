@@ -17,7 +17,7 @@ const posterLoading = ref(true)
 const imgError = ref(false)
 
 onMounted(async () => {
-  // Safe validation check without forcing an accidental early return block
+  // Validate that the key string is provided and populated
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     console.warn('TMDB API Key missing.')
     posterLoading.value = false
@@ -28,28 +28,32 @@ onMounted(async () => {
     const query = encodeURIComponent(props.movie.title)
     const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
+    // 1. Initial attempt: Search matching both Title and Year criteria
     const res = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${query}${year}`
+      `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // Extract the primary listing matching your data catalog criteria
-    const result = data.results?.[0]
+    // Fixed the trailing optional chaining syntax bug cleanly here
+    const result = data.results && data.results.length > 0 ? data.results[0] : null
+    
     if (result && result.poster_path) {
-      posterUrl.value = `https://image.tmdb.org/t/p/w500${result.poster_path}`
+      posterUrl.value = `https://tmdb.org{result.poster_path}`
+    </script>
     } else {
-      // Secondary fallback check trying a broader search if year parameter returned zero hits
+      // 2. Secondary fallback attempt: Broader search by Title only
       const broadRes = await fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${query}`
+        `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
       )
       const broadData = await broadRes.json()
-      const broadResult = broadData.results?.[0]
+      
+      const broadResult = broadData.results && broadData.results.length > 0 ? broadData.results[0] : null
       if (broadResult && broadResult.poster_path) {
-        posterUrl.value = `https://image.tmdb.org/t/p/w500${broadResult.poster_path}`
+        posterUrl.value = `https://tmdb.org{broadResult.poster_path}`
       }
     }
   } catch (err) {
-    console.error('TMDB API query execution failed:', err)
+    console.error('TMDB API fetch execution error encountered:', err)
   } finally {
     posterLoading.value = false
   }
