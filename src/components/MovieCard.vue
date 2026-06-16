@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const props = defineProps({
   movie: {
@@ -96,60 +96,82 @@ const props = defineProps({
   },
 })
 
-// ─── PLUGGED AND VERIFIED TMDB API KEY ──────────────────────────────────────
 const TMDB_API_KEY = '03f68354f66d0bad343d071861ab056c'
-// ────────────────────────────────────────────────────────────────────────────
 
 const posterUrl = ref('')
 const posterLoading = ref(true)
 const imgError = ref(false)
 
+// Clean out the visual text fragment from the user description layout string safely
+const cleanedDescription = computed(() => {
+  const desc = props.movie.description || 'No description available.'
+  if (desc.includes('[[poster:')) {
+    const parts = desc.split(']]')
+    return parts.length > 1 ? parts.slice(1).join(']]').trim() : desc
+  }
+  return desc
+})
+
 onMounted(async () => {
+  // PRIORITY 1: Check for an embedded image URL inside the description text field
+  const descriptionText = props.movie.description || ''
+  if (descriptionText.includes('[[poster:')) {
+    try {
+      const firstSplit = descriptionText.split('[[poster:')
+      if (firstSplit.length > 1) {
+        const secondSplit = firstSplit[1].split(']]')
+        const extractedUrl = secondSplit[0].trim()
+        if (extractedUrl) {
+          posterUrl.value = extractedUrl
+          posterLoading.value = false
+          return // Found it! Render and exit cleanly
+        }
+      }
+    } catch (e) {
+      console.error('Failed parsing embedded description image marker:', e)
+    }
+  }
+
+  // PRIORITY 2: Fallback to searching TMDB using explicit zero indices array calls
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     posterLoading.value = false
     return
   }
 
   try {
-    const cleanTitle = props.movie.title ? props.movie.title.trim() : ''
-    if (!cleanTitle) {
-      posterLoading.value = false
-      return
-    }
+    const query = encodeURIComponent(props.movie.title)
+    const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
-    const query = encodeURIComponent(cleanTitle)
-    const year = props.movie.year ? `&year=${props.movie.year}` : ''
-
-    // 1. Primary search query path validation
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Uses string property shift tracking instead of brackets to bypass all rendering issues
+    // FIXED: Safely extracting array element zero using standard zero-index arrays
     if (data && data.results && data.results.length > 0) {
-      const firstMovieObject = data.results.shift()
-      if (firstMovieObject && firstMovieObject.poster_path) {
-        posterUrl.value = 'https://tmdb.org' + firstMovieObject.poster_path
+      const firstMatch = data.results[0]
+      if (firstMatch && firstMatch.poster_path) {
+        posterUrl.value = `https://tmdb.org{firstMatch.poster_path}`
         posterLoading.value = false
-        return 
+        return
       }
     }
 
-    // 2. Secondary fallback path search loop
+    // Secondary fallback search by title only
     const broadRes = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
     )
     const broadData = await broadRes.json()
     
+    // FIXED: Safely extracting fallback array element zero using standard zero-index arrays
     if (broadData && broadData.results && broadData.results.length > 0) {
-      const fallbackMovieObject = broadData.results.shift()
-      if (fallbackMovieObject && fallbackMovieObject.poster_path) {
-        posterUrl.value = 'https://tmdb.org' + fallbackMovieObject.poster_path
+      const firstBroadMatch = broadData.results[0]
+      if (firstBroadMatch && firstBroadMatch.poster_path) {
+        posterUrl.value = `https://tmdb.org{firstBroadMatch.poster_path}`
       }
     }
   } catch (err) {
-    console.error('TMDB API Query exception encountered:', err)
+    console.error('TMDB API Fallback Exception Encountered:', err)
     imgError.value = true
   } finally {
     posterLoading.value = false
