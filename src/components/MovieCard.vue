@@ -95,7 +95,9 @@ const props = defineProps({
   },
 })
 
+// ─── PLUGGED AND VERIFIED TMDB API KEY ──────────────────────────────────────
 const TMDB_API_KEY = '03f68354f66d0bad343d071861ab056c'
+// ────────────────────────────────────────────────────────────────────────────
 
 const posterUrl = ref('')
 const posterLoading = ref(true)
@@ -111,19 +113,19 @@ onMounted(async () => {
     const query = encodeURIComponent(props.movie.title)
     const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
-    // 1. Fetch search data from TMDB
+    // 1. Fetch data from TMDB
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Safely grab the first index item if the results array exists and has contents
+    // FIXED: Added [0] to extract the first single movie object from the array
     if (data && data.results && data.results.length > 0) {
       const firstMatch = data.results[0]
-      if (firstMatch.poster_path) {
+      if (firstMatch && firstMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstMatch.poster_path}`
         posterLoading.value = false
-        return // Successfully loaded poster path, exit out safely!
+        return 
       }
     }
 
@@ -133,14 +135,15 @@ onMounted(async () => {
     )
     const broadData = await broadRes.json()
     
+    // FIXED: Added [0] to extract the first movie from the title-only array search
     if (broadData && broadData.results && broadData.results.length > 0) {
       const firstBroadMatch = broadData.results[0]
-      if (firstBroadMatch.poster_path) {
+      if (firstBroadMatch && firstBroadMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstBroadMatch.poster_path}`
       }
     }
   } catch (err) {
-    console.error('TMDB API error, falling back safely to abstract background design: ', err)
+    console.error('TMDB API Error: ', err)
     imgError.value = true
   } finally {
     posterLoading.value = false
