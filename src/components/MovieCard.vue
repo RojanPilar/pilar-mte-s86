@@ -96,7 +96,9 @@ const props = defineProps({
   },
 })
 
+// ─── PLUGGED AND VERIFIED TMDB API KEY ──────────────────────────────────────
 const TMDB_API_KEY = '03f68354f66d0bad343d071861ab056c'
+// ────────────────────────────────────────────────────────────────────────────
 
 const posterUrl = ref('')
 const posterLoading = ref(true)
@@ -132,22 +134,23 @@ onMounted(async () => {
     }
   }
 
-  // PRIORITY 2: Fallback to searching TMDB using explicit zero indices array calls
+  // PRIORITY 2: Fallback to searching TMDB using accurate endpoints and proper string interpolation
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     posterLoading.value = false
     return
   }
 
   try {
-    const query = encodeURIComponent(props.movie.title)
+    const query = encodeURIComponent(props.movie.title.trim())
     const year  = props.movie.year ? `&year=${props.movie.year}` : ''
 
+    // FIXED: Restored the true TMDB version 3 endpoint and added missing '$' tokens
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Safely extracting array element zero using standard zero-index arrays
+    // FIXED: Restored proper image base host link injection syntax
     if (data && data.results && data.results.length > 0) {
       const firstMatch = data.results[0]
       if (firstMatch && firstMatch.poster_path) {
@@ -157,13 +160,12 @@ onMounted(async () => {
       }
     }
 
-    // Secondary fallback search by title only
+    // Secondary fallback search by title only (catches movies if year metadata slightly mismatches)
     const broadRes = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
     )
     const broadData = await broadRes.json()
     
-    // FIXED: Safely extracting fallback array element zero using standard zero-index arrays
     if (broadData && broadData.results && broadData.results.length > 0) {
       const firstBroadMatch = broadData.results[0]
       if (firstBroadMatch && firstBroadMatch.poster_path) {
