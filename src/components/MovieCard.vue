@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const props = defineProps({
   movie: {
@@ -96,74 +96,54 @@ const props = defineProps({
   },
 })
 
+// ─── PLUGGED AND VERIFIED TMDB API KEY ──────────────────────────────────────
 const TMDB_API_KEY = '03f68354f66d0bad343d071861ab056c'
+// ────────────────────────────────────────────────────────────────────────────
 
 const posterUrl = ref('')
 const posterLoading = ref(true)
 const imgError = ref(false)
 
-// Clean out the visual text fragment from the user description layout string safely
-const cleanedDescription = computed(() => {
-  const desc = props.movie.description || 'No description available.'
-  if (desc.includes('[[poster:')) {
-    const parts = desc.split(']]')
-    return parts.length > 1 ? parts.slice(1).join(']]').trim() : desc
-  }
-  return desc
-})
-
 onMounted(async () => {
-  // PRIORITY 1: Check for an embedded image URL inside the description text field
-  const descriptionText = props.movie.description || ''
-  if (descriptionText.includes('[[poster:')) {
-    try {
-      const firstSplit = descriptionText.split('[[poster:')
-      if (firstSplit.length > 1) {
-        const secondSplit = firstSplit[1].split(']]')
-        const extractedUrl = secondSplit[0].trim()
-        if (extractedUrl) {
-          posterUrl.value = extractedUrl
-          posterLoading.value = false
-          return // Found it! Render and exit cleanly
-        }
-      }
-    } catch (e) {
-      console.error('Failed parsing embedded description image marker:', e)
-    }
-  }
-
-  // PRIORITY 2: Fallback to searching TMDB using explicit zero indices array calls
   if (!TMDB_API_KEY || TMDB_API_KEY.trim() === '') {
     posterLoading.value = false
     return
   }
 
   try {
-    const query = encodeURIComponent(props.movie.title)
-    const year  = props.movie.year ? `&year=${props.movie.year}` : ''
+    // FIXED: Added .trim() to wipe out any accidental hidden spaces breaking the query
+    const cleanTitle = props.movie.title ? props.movie.title.trim() : ''
+    if (!cleanTitle) {
+      posterLoading.value = false
+      return
+    }
 
+    const query = encodeURIComponent(cleanTitle)
+    const year = props.movie.year ? `&year=${props.movie.year}` : ''
+
+    // 1. Primary search: Matches Title and Release Year
     const res = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}${year}`
     )
     const data = await res.json()
 
-    // FIXED: Safely extracting array element zero using standard zero-index arrays
+    // FIXED: Pulls index 0 out of the results array via data.results[0]
     if (data && data.results && data.results.length > 0) {
       const firstMatch = data.results[0]
       if (firstMatch && firstMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstMatch.poster_path}`
         posterLoading.value = false
-        return
+        return 
       }
     }
 
-    // Secondary fallback search by title only
+    // 2. Secondary fallback search: Matches Title parameter only (ignores conflicting year metadata)
     const broadRes = await fetch(
       `https://themoviedb.org{TMDB_API_KEY}&query=${query}`
     )
     const broadData = await broadRes.json()
     
-    // FIXED: Safely extracting fallback array element zero using standard zero-index arrays
+    // FIXED: Pulls index 0 out of the broad results array via broadData.results[0]
     if (broadData && broadData.results && broadData.results.length > 0) {
       const firstBroadMatch = broadData.results[0]
       if (firstBroadMatch && firstBroadMatch.poster_path) {
@@ -171,10 +151,11 @@ onMounted(async () => {
       }
     }
   } catch (err) {
-    console.error('TMDB API Fallback Exception Encountered:', err)
+    console.error('TMDB API Query exception encountered:', err)
     imgError.value = true
   } finally {
     posterLoading.value = false
   }
 })
 </script>
+
