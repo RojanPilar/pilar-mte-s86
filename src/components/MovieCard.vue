@@ -100,7 +100,7 @@ const props = defineProps({
 })
 
 // ─── PASTE YOUR TMDB API KEY HERE ───────────────────────────────────────────
-const TMDB_API_KEY = 'YOUR_TMDB_API_KEY_HERE'
+const TMDB_API_KEY = '03f68354f66d0bad343d071861ab056c'
 // ────────────────────────────────────────────────────────────────────────────
 
 const posterUrl = ref('')
@@ -108,7 +108,7 @@ const posterLoading = ref(true)
 const imgError = ref(false)
 
 onMounted(async () => {
-  if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+  if (!TMDB_API_KEY || TMDB_API_KEY === '03f68354f66d0bad343d071861ab056c') {
     posterLoading.value = false
     return
   }
