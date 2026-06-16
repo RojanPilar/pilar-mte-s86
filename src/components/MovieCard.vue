@@ -119,9 +119,9 @@ onMounted(async () => {
     )
     const data = await res.json()
 
-    // FIXED: Safely extracting index element zero [0] explicitly from the dataset array
+    // FIXED: Using .at(0) to safely extract the first movie item without brackets
     if (data && data.results && data.results.length > 0) {
-      const firstMatch = data.results[0]
+      const firstMatch = data.results.at(0)
       if (firstMatch && firstMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstMatch.poster_path}`
         posterLoading.value = false
@@ -135,9 +135,9 @@ onMounted(async () => {
     )
     const broadData = await broadRes.json()
     
-    // FIXED: Safely extracting index element zero [0] explicitly from the title broad search
+    // FIXED: Using .at(0) here as well to safely extract the fallback movie item
     if (broadData && broadData.results && broadData.results.length > 0) {
-      const firstBroadMatch = broadData.results[0]
+      const firstBroadMatch = broadData.results.at(0)
       if (firstBroadMatch && firstBroadMatch.poster_path) {
         posterUrl.value = `https://tmdb.org{firstBroadMatch.poster_path}`
       }
